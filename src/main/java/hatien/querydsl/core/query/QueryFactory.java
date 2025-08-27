@@ -18,7 +18,7 @@ public class QueryFactory {
     }
     
     /**
-     * Creates a new query starting with a SELECT clause.
+     * Creates a new query starting with a SELECT clause for a single expression.
      *
      * @param <T> the type of the expression
      * @param expression the expression to select
@@ -26,6 +26,17 @@ public class QueryFactory {
      */
     public <T> Query<T> select(Expression<T> expression) {
         return new QueryBuilder<T>().select(expression);
+    }
+    
+    /**
+     * Creates a new query starting with a SELECT clause for multiple expressions.
+     * This method returns a Query<Object[]> since multiple columns are selected.
+     *
+     * @param expressions the expressions to select
+     * @return a new Query instance with the SELECT clause configured for multiple columns
+     */
+    public Query<Object[]> select(Expression<?>... expressions) {
+        return new QueryBuilder<Object[]>().select(expressions);
     }
     
     /**

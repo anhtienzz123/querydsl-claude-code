@@ -31,6 +31,9 @@ public class QueryDSLExamples {
         
         // Example 6: Product queries
         productQueriesExample();
+        
+        // Example 7: Column selection queries
+        columnSelectionExample();
     }
     
     private static void simpleSelectExample() {
@@ -156,6 +159,51 @@ public class QueryDSLExamples {
                        .or(product.description.contains("laptop")));
         
         System.out.println("   Laptop search: " + query6c.toSQL());
+        System.out.println();
+    }
+    
+    private static void columnSelectionExample() {
+        System.out.println("7. Column selection queries:");
+        
+        // Select single column
+        Query<String> query7a = queryFactory
+                .select(user.firstName)
+                .from(user.getEntityPath())
+                .where(user.age.gt(18));
+        
+        System.out.println("   Single column: " + query7a.toSQL());
+        
+        // Select multiple columns
+        Query<Object[]> query7b = queryFactory
+                .select(user.firstName, user.lastName, user.age)
+                .from(user.getEntityPath())
+                .where(user.city.eq("New York"));
+        
+        System.out.println("   Multiple columns: " + query7b.toSQL());
+        
+        // Select specific columns with complex conditions
+        Query<Object[]> query7c = queryFactory
+                .select(user.firstName, user.email)
+                .from(user.getEntityPath())
+                .where(user.age.between(25, 65), user.email.isNotNull());
+        
+        System.out.println("   Complex selection: " + query7c.toSQL());
+        
+        // Product column selection
+        Query<Object[]> query7d = queryFactory
+                .select(product.name, product.price, product.category)
+                .from(product.getEntityPath())
+                .where(product.price.gt(new BigDecimal("50.00")));
+        
+        System.out.println("   Product columns: " + query7d.toSQL());
+        
+        // Select with mixed data types
+        Query<Object[]> query7e = queryFactory
+                .select(user.firstName, user.age, user.city)
+                .from(user.getEntityPath())
+                .where(user.firstName.startsWith("J"));
+        
+        System.out.println("   Mixed data types: " + query7e.toSQL());
         System.out.println();
     }
 }

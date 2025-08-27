@@ -1,5 +1,6 @@
 package hatien.querydsl.core.visitor;
 
+import hatien.querydsl.core.expression.Expression;
 import hatien.querydsl.core.path.EntityPath;
 import hatien.querydsl.core.path.StringPath;
 import hatien.querydsl.core.path.NumberPath;
@@ -79,7 +80,16 @@ public class SQLVisitor implements ExpressionVisitor<String> {
     private String formatBinary(BooleanExpression expression, String operator) {
         Object[] operands = expression.getOperands();
         String left = visitOperand(operands[0]);
-        String right = formatValue(operands[1]);
+        String right;
+        
+        // For logical operators (AND, OR), both operands should be visited as expressions
+        // For comparison operators, the right operand should be formatted as a value
+        if ("AND".equals(operator) || "OR".equals(operator)) {
+            right = visitOperand(operands[1]);
+        } else {
+            right = formatValue(operands[1]);
+        }
+        
         return String.format("(%s %s %s)", left, operator, right);
     }
     
@@ -210,8 +220,8 @@ public class SQLVisitor implements ExpressionVisitor<String> {
      * @return SQL string representation of the operand
      */
     private String visitOperand(Object operand) {
-        if (operand instanceof hatien.querydsl.core.expression.Expression) {
-            return ((hatien.querydsl.core.expression.Expression<?>) operand).accept(this);
+        if (operand instanceof Expression) {
+            return ((Expression<?>) operand).accept(this);
         }
         return String.valueOf(operand);
     }

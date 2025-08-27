@@ -20,6 +20,7 @@ public class QueryDSLTest {
         testStringOperations();
         testNumericOperations();
         testBooleanLogic();
+        testColumnSelection();
         
         System.out.println("\n=== All tests completed successfully! ===");
     }
@@ -159,6 +160,58 @@ public class QueryDSLTest {
         String sql3 = q3.toSQL();
         System.out.println("✓ NOT operation: " + sql3);
         assert sql3.contains("NOT");
+        
+        System.out.println();
+    }
+    
+    private static void testColumnSelection() {
+        System.out.println("Testing column selection...");
+        
+        // Test single column selection
+        Query<String> q1 = queryFactory
+                .select(user.firstName)
+                .from(user.getEntityPath())
+                .where(user.age.gt(18));
+        
+        String sql1 = q1.toSQL();
+        System.out.println("✓ Single column: " + sql1);
+        assert sql1.contains("SELECT user.firstName");
+        assert sql1.contains("FROM user");
+        assert !sql1.contains("SELECT *");
+        
+        // Test multiple columns
+        Query<Object[]> q2 = queryFactory
+                .select(user.firstName, user.lastName, user.age)
+                .from(user.getEntityPath())
+                .where(user.city.eq("Test"));
+        
+        String sql2 = q2.toSQL();
+        System.out.println("✓ Multiple columns: " + sql2);
+        assert sql2.contains("SELECT user.firstName, user.lastName, user.age");
+        assert sql2.contains("FROM user");
+        
+        // Test mixed data types
+        Query<Object[]> q3 = queryFactory
+                .select(product.name, product.price)
+                .from(product.getEntityPath())
+                .where(product.stockQuantity.gt(0));
+        
+        String sql3 = q3.toSQL();
+        System.out.println("✓ Mixed data types: " + sql3);
+        assert sql3.contains("SELECT product.name, product.price");
+        assert sql3.contains("product.stockQuantity > 0");
+        
+        // Test column selection with complex conditions
+        Query<Object[]> q4 = queryFactory
+                .select(user.firstName, user.email)
+                .from(user.getEntityPath())
+                .where(user.age.between(25, 65), user.email.isNotNull());
+        
+        String sql4 = q4.toSQL();
+        System.out.println("✓ Complex conditions with columns: " + sql4);
+        assert sql4.contains("SELECT user.firstName, user.email");
+        assert sql4.contains("BETWEEN 25 AND 65");
+        assert sql4.contains("IS NOT NULL");
         
         System.out.println();
     }

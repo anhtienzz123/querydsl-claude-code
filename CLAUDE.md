@@ -69,7 +69,10 @@ The library uses a sophisticated type system:
 ### Entry Points
 - Start queries with `QueryFactory.create()`
 - Use static imports: `import static hatien.querydsl.examples.QUser.user;`
-- Main query patterns: `queryFactory.selectFrom(entity).where(conditions)`
+- Main query patterns: 
+  - `queryFactory.selectFrom(entity).where(conditions)` - Select all columns
+  - `queryFactory.select(column).from(entity).where(conditions)` - Select single column
+  - `queryFactory.select(col1, col2, col3).from(entity).where(conditions)` - Select multiple columns
 
 ## Testing Strategy
 
@@ -79,6 +82,7 @@ The project includes comprehensive test coverage in `QueryDSLTest.java` that val
 - Numeric operations (BETWEEN, IN, comparisons)
 - Boolean logic (AND, OR, NOT)
 - Complex predicate combinations
+- Column selection (single and multiple columns)
 
 Tests use assertion statements to validate generated SQL output.
 
