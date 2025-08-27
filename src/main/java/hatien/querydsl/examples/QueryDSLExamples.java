@@ -2,6 +2,9 @@ package hatien.querydsl.examples;
 
 import hatien.querydsl.core.query.QueryFactory;
 import hatien.querydsl.core.query.Query;
+import hatien.querydsl.core.query.InsertQuery;
+import hatien.querydsl.core.query.UpdateQuery;
+import hatien.querydsl.core.query.DeleteQuery;
 import hatien.querydsl.core.predicate.BooleanExpression;
 import java.math.BigDecimal;
 
@@ -34,6 +37,15 @@ public class QueryDSLExamples {
         
         // Example 7: Column selection queries
         columnSelectionExample();
+        
+        // Example 8: INSERT operations
+        insertOperationsExample();
+        
+        // Example 9: UPDATE operations
+        updateOperationsExample();
+        
+        // Example 10: DELETE operations
+        deleteOperationsExample();
     }
     
     private static void simpleSelectExample() {
@@ -204,6 +216,154 @@ public class QueryDSLExamples {
                 .where(user.firstName.startsWith("J"));
         
         System.out.println("   Mixed data types: " + query7e.toSQL());
+        System.out.println();
+    }
+    
+    private static void insertOperationsExample() {
+        System.out.println("8. INSERT operations:");
+        
+        // Insert a new user with set() method
+        InsertQuery<User> insert1 = queryFactory
+                .insertInto(user.getEntityPath())
+                .set(user.firstName, "Alice")
+                .set(user.lastName, "Johnson")
+                .set(user.age, 28)
+                .set(user.email, "alice.johnson@example.com")
+                .set(user.city, "San Francisco");
+        
+        System.out.println("   Insert user with set(): " + insert1.toSQL());
+        
+        // Insert with columns and values
+        InsertQuery<User> insert2 = queryFactory
+                .<User>insert()
+                .into(user.getEntityPath())
+                .columns(user.firstName, user.lastName, user.email)
+                .values("Bob", "Smith", "bob.smith@example.com");
+        
+        System.out.println("   Insert with columns/values: " + insert2.toSQL());
+        
+        // Insert a new product
+        InsertQuery<Product> insert3 = queryFactory
+                .insertInto(product.getEntityPath())
+                .set(product.name, "Gaming Laptop")
+                .set(product.description, "High-performance gaming laptop")
+                .set(product.price, new BigDecimal("1299.99"))
+                .set(product.category, "Electronics")
+                .set(product.stockQuantity, 5);
+        
+        System.out.println("   Insert product: " + insert3.toSQL());
+        
+        // Insert minimal data
+        InsertQuery<Product> insert4 = queryFactory
+                .insertInto(product.getEntityPath())
+                .set(product.name, "Basic Mouse")
+                .set(product.price, new BigDecimal("19.99"));
+        
+        System.out.println("   Insert minimal product: " + insert4.toSQL());
+        System.out.println();
+    }
+    
+    private static void updateOperationsExample() {
+        System.out.println("9. UPDATE operations:");
+        
+        // Update user email by first name
+        UpdateQuery<User> update1 = queryFactory
+                .update(user.getEntityPath())
+                .set(user.email, "john.doe.updated@example.com")
+                .where(user.firstName.eq("John"));
+        
+        System.out.println("   Update user email: " + update1.toSQL());
+        
+        // Update multiple fields with multiple conditions
+        UpdateQuery<User> update2 = queryFactory
+                .update(user.getEntityPath())
+                .set(user.city, "Boston")
+                .set(user.age, 31)
+                .where(user.firstName.eq("John"), user.lastName.eq("Doe"));
+        
+        System.out.println("   Update multiple fields: " + update2.toSQL());
+        
+        // Update product price for a category
+        UpdateQuery<Product> update3 = queryFactory
+                .update(product.getEntityPath())
+                .set(product.price, new BigDecimal("79.99"))
+                .where(product.category.eq("Electronics")
+                       .and(product.name.contains("Mouse")));
+        
+        System.out.println("   Update product price: " + update3.toSQL());
+        
+        // Bulk update - reduce stock for expensive items
+        UpdateQuery<Product> update4 = queryFactory
+                .update(product.getEntityPath())
+                .set(product.stockQuantity, 0)
+                .where(product.price.gt(new BigDecimal("1000")));
+        
+        System.out.println("   Bulk stock update: " + update4.toSQL());
+        
+        // Update with expression (referencing current column value)
+        UpdateQuery<Product> update5 = queryFactory
+                .update(product.getEntityPath())
+                .set(product.stockQuantity, product.stockQuantity)  // In practice, this would be arithmetic
+                .where(product.category.eq("Electronics"));
+        
+        System.out.println("   Update with expression: " + update5.toSQL());
+        System.out.println();
+    }
+    
+    private static void deleteOperationsExample() {
+        System.out.println("10. DELETE operations:");
+        
+        // Delete users by age
+        DeleteQuery<User> delete1 = queryFactory
+                .deleteFrom(user.getEntityPath())
+                .where(user.age.lt(18));
+        
+        System.out.println("   Delete minors: " + delete1.toSQL());
+        
+        // Delete users from specific city
+        DeleteQuery<User> delete2 = queryFactory
+                .<User>delete()
+                .from(user.getEntityPath())
+                .where(user.city.eq("Unknown"));
+        
+        System.out.println("   Delete users from Unknown city: " + delete2.toSQL());
+        
+        // Delete products with complex conditions
+        DeleteQuery<Product> delete3 = queryFactory
+                .deleteFrom(product.getEntityPath())
+                .where(product.stockQuantity.eq(0)
+                       .and(product.price.lt(new BigDecimal("10"))));
+        
+        System.out.println("   Delete cheap out-of-stock products: " + delete3.toSQL());
+        
+        // Delete using OR condition
+        DeleteQuery<User> delete4 = queryFactory
+                .deleteFrom(user.getEntityPath())
+                .where(user.age.lt(18).or(user.age.gt(65)));
+        
+        System.out.println("   Delete by age range (OR): " + delete4.toSQL());
+        
+        // Delete using IN condition
+        DeleteQuery<User> delete5 = queryFactory
+                .deleteFrom(user.getEntityPath())
+                .where(user.city.in("TestCity1", "TestCity2", "InvalidCity"));
+        
+        System.out.println("   Delete users from test cities: " + delete5.toSQL());
+        
+        // Delete products by category
+        DeleteQuery<Product> delete6 = queryFactory
+                .deleteFrom(product.getEntityPath())
+                .where(product.category.eq("Discontinued"));
+        
+        System.out.println("   Delete discontinued products: " + delete6.toSQL());
+        
+        // Conditional delete with string operations
+        DeleteQuery<User> delete7 = queryFactory
+                .deleteFrom(user.getEntityPath())
+                .where(user.email.like("%@tempmail.%")
+                       .or(user.firstName.isEmpty()));
+        
+        System.out.println("   Delete temp/empty users: " + delete7.toSQL());
         System.out.println();
     }
 }

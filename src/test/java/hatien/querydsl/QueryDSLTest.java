@@ -2,6 +2,9 @@ package hatien.querydsl;
 
 import hatien.querydsl.core.query.QueryFactory;
 import hatien.querydsl.core.query.Query;
+import hatien.querydsl.core.query.InsertQuery;
+import hatien.querydsl.core.query.UpdateQuery;
+import hatien.querydsl.core.query.DeleteQuery;
 import hatien.querydsl.examples.QUser;
 import hatien.querydsl.examples.QProduct;
 import java.math.BigDecimal;
@@ -21,6 +24,9 @@ public class QueryDSLTest {
         testNumericOperations();
         testBooleanLogic();
         testColumnSelection();
+        testInsertQueries();
+        testUpdateQueries();
+        testDeleteQueries();
         
         System.out.println("\n=== All tests completed successfully! ===");
     }
@@ -212,6 +218,162 @@ public class QueryDSLTest {
         assert sql4.contains("SELECT user.firstName, user.email");
         assert sql4.contains("BETWEEN 25 AND 65");
         assert sql4.contains("IS NOT NULL");
+        
+        System.out.println();
+    }
+    
+    private static void testInsertQueries() {
+        System.out.println("Testing INSERT queries...");
+        
+        // Test basic insert with set() method
+        InsertQuery<hatien.querydsl.examples.User> q1 = queryFactory
+                .insertInto(user.getEntityPath())
+                .set(user.firstName, "John")
+                .set(user.lastName, "Doe")
+                .set(user.age, 30)
+                .set(user.email, "john.doe@example.com");
+        
+        String sql1 = q1.toSQL();
+        System.out.println("✓ Basic insert with set(): " + sql1);
+        assert sql1.contains("INSERT INTO user");
+        assert sql1.contains("user.firstName, user.lastName, user.age, user.email");
+        assert sql1.contains("VALUES ('John', 'Doe', 30, 'john.doe@example.com')");
+        
+        // Test insert with columns and values
+        InsertQuery<hatien.querydsl.examples.User> q2 = queryFactory
+                .<hatien.querydsl.examples.User>insert()
+                .into(user.getEntityPath())
+                .columns(user.firstName, user.lastName, user.city)
+                .values("Jane", "Smith", "Boston");
+        
+        String sql2 = q2.toSQL();
+        System.out.println("✓ Insert with columns/values: " + sql2);
+        assert sql2.contains("INSERT INTO user");
+        assert sql2.contains("(user.firstName, user.lastName, user.city)");
+        assert sql2.contains("VALUES ('Jane', 'Smith', 'Boston')");
+        
+        // Test insert product with BigDecimal
+        InsertQuery<hatien.querydsl.examples.Product> q3 = queryFactory
+                .insertInto(product.getEntityPath())
+                .set(product.name, "Laptop")
+                .set(product.price, new BigDecimal("999.99"))
+                .set(product.stockQuantity, 10);
+        
+        String sql3 = q3.toSQL();
+        System.out.println("✓ Insert product with BigDecimal: " + sql3);
+        assert sql3.contains("INSERT INTO product");
+        assert sql3.contains("VALUES ('Laptop', 999.99, 10)");
+        
+        System.out.println();
+    }
+    
+    private static void testUpdateQueries() {
+        System.out.println("Testing UPDATE queries...");
+        
+        // Test basic update with where clause
+        UpdateQuery<hatien.querydsl.examples.User> q1 = queryFactory
+                .update(user.getEntityPath())
+                .set(user.email, "newemail@example.com")
+                .set(user.city, "New York")
+                .where(user.firstName.eq("John"));
+        
+        String sql1 = q1.toSQL();
+        System.out.println("✓ Basic update with where: " + sql1);
+        assert sql1.contains("UPDATE user");
+        assert sql1.contains("SET user.email = 'newemail@example.com', user.city = 'New York'");
+        assert sql1.contains("WHERE (user.firstName = 'John')");
+        
+        // Test update without where clause
+        UpdateQuery<hatien.querydsl.examples.Product> q2 = queryFactory
+                .<hatien.querydsl.examples.Product>update()
+                .table(product.getEntityPath())
+                .set(product.stockQuantity, 0);
+        
+        String sql2 = q2.toSQL();
+        System.out.println("✓ Update without where: " + sql2);
+        assert sql2.contains("UPDATE product");
+        assert sql2.contains("SET product.stockQuantity = 0");
+        assert !sql2.contains("WHERE");
+        
+        // Test update with multiple conditions
+        UpdateQuery<hatien.querydsl.examples.User> q3 = queryFactory
+                .update(user.getEntityPath())
+                .set(user.age, 31)
+                .where(user.firstName.eq("John"), user.lastName.eq("Doe"));
+        
+        String sql3 = q3.toSQL();
+        System.out.println("✓ Update with multiple conditions: " + sql3);
+        assert sql3.contains("UPDATE user");
+        assert sql3.contains("SET user.age = 31");
+        assert sql3.contains("WHERE (user.firstName = 'John') AND (user.lastName = 'Doe')");
+        
+        // Test update with expression (column = column + value)
+        UpdateQuery<hatien.querydsl.examples.Product> q4 = queryFactory
+                .update(product.getEntityPath())
+                .set(product.stockQuantity, product.stockQuantity) // In real implementation, this would be an arithmetic expression
+                .where(product.price.gt(new BigDecimal("100")));
+        
+        String sql4 = q4.toSQL();
+        System.out.println("✓ Update with expression: " + sql4);
+        assert sql4.contains("UPDATE product");
+        assert sql4.contains("SET product.stockQuantity = product.stockQuantity");
+        assert sql4.contains("WHERE (product.price > 100)");
+        
+        System.out.println();
+    }
+    
+    private static void testDeleteQueries() {
+        System.out.println("Testing DELETE queries...");
+        
+        // Test basic delete with where clause
+        DeleteQuery<hatien.querydsl.examples.User> q1 = queryFactory
+                .deleteFrom(user.getEntityPath())
+                .where(user.age.lt(18));
+        
+        String sql1 = q1.toSQL();
+        System.out.println("✓ Basic delete with where: " + sql1);
+        assert sql1.contains("DELETE FROM user");
+        assert sql1.contains("WHERE (user.age < 18)");
+        
+        // Test delete with multiple conditions
+        DeleteQuery<hatien.querydsl.examples.User> q2 = queryFactory
+                .<hatien.querydsl.examples.User>delete()
+                .from(user.getEntityPath())
+                .where(user.city.eq("Unknown"), user.email.isNull());
+        
+        String sql2 = q2.toSQL();
+        System.out.println("✓ Delete with multiple conditions: " + sql2);
+        assert sql2.contains("DELETE FROM user");
+        assert sql2.contains("WHERE (user.city = 'Unknown') AND (user.email IS NULL)");
+        
+        // Test delete with complex boolean logic
+        DeleteQuery<hatien.querydsl.examples.User> q3 = queryFactory
+                .deleteFrom(user.getEntityPath())
+                .where(user.age.lt(18).or(user.age.gt(65)));
+        
+        String sql3 = q3.toSQL();
+        System.out.println("✓ Delete with complex boolean logic: " + sql3);
+        assert sql3.contains("DELETE FROM user");
+        assert sql3.contains("WHERE ((user.age < 18) OR (user.age > 65))");
+        
+        // Test delete all (no where clause)
+        DeleteQuery<hatien.querydsl.examples.Product> q4 = queryFactory
+                .deleteFrom(product.getEntityPath());
+        
+        String sql4 = q4.toSQL();
+        System.out.println("✓ Delete all (no where): " + sql4);
+        assert sql4.contains("DELETE FROM product");
+        assert !sql4.contains("WHERE");
+        
+        // Test delete with IN condition
+        DeleteQuery<hatien.querydsl.examples.User> q5 = queryFactory
+                .deleteFrom(user.getEntityPath())
+                .where(user.city.in("Tokyo", "Seoul", "Beijing"));
+        
+        String sql5 = q5.toSQL();
+        System.out.println("✓ Delete with IN condition: " + sql5);
+        assert sql5.contains("DELETE FROM user");
+        assert sql5.contains("WHERE (user.city IN ('Tokyo', 'Seoul', 'Beijing'))");
         
         System.out.println();
     }

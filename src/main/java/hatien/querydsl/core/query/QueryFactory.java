@@ -5,6 +5,7 @@ import hatien.querydsl.core.expression.Expression;
 /**
  * Factory class for creating Query instances with a fluent API.
  * Provides convenient methods to start building queries with various starting points.
+ * Supports SELECT, INSERT, UPDATE, and DELETE operations.
  */
 public class QueryFactory {
     
@@ -60,5 +61,68 @@ public class QueryFactory {
      */
     public <T> Query<T> from(Expression<T> source) {
         return new QueryBuilder<T>().from(source);
+    }
+    
+    /**
+     * Creates a new INSERT query.
+     *
+     * @param <T> the type of the entity to insert
+     * @return a new InsertQuery instance
+     */
+    public <T> InsertQuery<T> insert() {
+        return new InsertQueryBuilder<T>();
+    }
+    
+    /**
+     * Creates a new INSERT query with the target entity specified.
+     *
+     * @param <T> the type of the entity to insert
+     * @param entity the target entity path
+     * @return a new InsertQuery instance with the target entity configured
+     */
+    public <T> InsertQuery<T> insertInto(Expression<T> entity) {
+        return new InsertQueryBuilder<T>().into(entity);
+    }
+    
+    /**
+     * Creates a new UPDATE query.
+     *
+     * @param <T> the type of the entity to update
+     * @return a new UpdateQuery instance
+     */
+    public <T> UpdateQuery<T> update() {
+        return new UpdateQueryBuilder<T>();
+    }
+    
+    /**
+     * Creates a new UPDATE query with the target entity specified.
+     *
+     * @param <T> the type of the entity to update
+     * @param entity the target entity path
+     * @return a new UpdateQuery instance with the target entity configured
+     */
+    public <T> UpdateQuery<T> update(Expression<T> entity) {
+        return new UpdateQueryBuilder<T>().table(entity);
+    }
+    
+    /**
+     * Creates a new DELETE query.
+     *
+     * @param <T> the type of the entity to delete
+     * @return a new DeleteQuery instance
+     */
+    public <T> DeleteQuery<T> delete() {
+        return new DeleteQueryBuilder<T>();
+    }
+    
+    /**
+     * Creates a new DELETE query with the target entity specified.
+     *
+     * @param <T> the type of the entity to delete
+     * @param entity the target entity path
+     * @return a new DeleteQuery instance with the target entity configured
+     */
+    public <T> DeleteQuery<T> deleteFrom(Expression<T> entity) {
+        return new DeleteQueryBuilder<T>().from(entity);
     }
 }

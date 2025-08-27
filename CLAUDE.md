@@ -70,19 +70,44 @@ The library uses a sophisticated type system:
 - Start queries with `QueryFactory.create()`
 - Use static imports: `import static hatien.querydsl.examples.QUser.user;`
 - Main query patterns: 
-  - `queryFactory.selectFrom(entity).where(conditions)` - Select all columns
-  - `queryFactory.select(column).from(entity).where(conditions)` - Select single column
-  - `queryFactory.select(col1, col2, col3).from(entity).where(conditions)` - Select multiple columns
+  - **SELECT queries:**
+    - `queryFactory.selectFrom(entity).where(conditions)` - Select all columns
+    - `queryFactory.select(column).from(entity).where(conditions)` - Select single column
+    - `queryFactory.select(col1, col2, col3).from(entity).where(conditions)` - Select multiple columns
+  - **INSERT queries:**
+    - `queryFactory.insertInto(entity).set(column, value)` - Insert with set() method
+    - `queryFactory.insert().into(entity).columns(cols).values(vals)` - Insert with columns/values
+  - **UPDATE queries:**
+    - `queryFactory.update(entity).set(column, value).where(conditions)` - Update with conditions
+    - `queryFactory.update(entity).set(column, expression).where(conditions)` - Update with expressions
+  - **DELETE queries:**
+    - `queryFactory.deleteFrom(entity).where(conditions)` - Delete with conditions
+    - `queryFactory.deleteFrom(entity)` - Delete all rows
 
 ## Testing Strategy
 
 The project includes comprehensive test coverage in `QueryDSLTest.java` that validates:
-- Basic query generation
-- String operations (LIKE, contains, startsWith)
-- Numeric operations (BETWEEN, IN, comparisons)
-- Boolean logic (AND, OR, NOT)
-- Complex predicate combinations
-- Column selection (single and multiple columns)
+- **SELECT query generation:**
+  - Basic query generation
+  - String operations (LIKE, contains, startsWith)
+  - Numeric operations (BETWEEN, IN, comparisons)
+  - Boolean logic (AND, OR, NOT)
+  - Complex predicate combinations
+  - Column selection (single and multiple columns)
+- **INSERT query generation:**
+  - Insert with set() method (column-value pairs)
+  - Insert with columns() and values() method
+  - Insert with various data types including BigDecimal
+- **UPDATE query generation:**
+  - Update with single and multiple set clauses
+  - Update with WHERE conditions
+  - Update with complex boolean logic
+  - Update with expression references
+- **DELETE query generation:**
+  - Delete with WHERE conditions
+  - Delete with complex boolean logic (AND, OR, NOT)
+  - Delete with IN conditions
+  - Delete all rows (no WHERE clause)
 
 Tests use assertion statements to validate generated SQL output.
 
