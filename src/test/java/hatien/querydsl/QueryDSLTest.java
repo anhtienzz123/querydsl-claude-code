@@ -7,6 +7,13 @@ import hatien.querydsl.core.query.UpdateQuery;
 import hatien.querydsl.core.query.DeleteQuery;
 import hatien.querydsl.examples.QUser;
 import hatien.querydsl.examples.QProduct;
+import hatien.querydsl.core.expression.CountExpression;
+import hatien.querydsl.core.expression.SumExpression;
+import hatien.querydsl.core.expression.AvgExpression;
+import hatien.querydsl.core.expression.MinExpression;
+import hatien.querydsl.core.expression.MaxExpression;
+import hatien.querydsl.core.expression.CaseExpression;
+import hatien.querydsl.core.expression.ExpressionUtils;
 import java.math.BigDecimal;
 
 public class QueryDSLTest {
@@ -27,6 +34,8 @@ public class QueryDSLTest {
         testInsertQueries();
         testUpdateQueries();
         testDeleteQueries();
+        testAggregateFunctions();
+        testCaseWhenExpressions();
         
         System.out.println("\n=== All tests completed successfully! ===");
     }
@@ -374,6 +383,200 @@ public class QueryDSLTest {
         System.out.println("✓ Delete with IN condition: " + sql5);
         assert sql5.contains("DELETE FROM user");
         assert sql5.contains("WHERE (user.city IN ('Tokyo', 'Seoul', 'Beijing'))");
+        
+        System.out.println();
+    }
+
+    private static void testAggregateFunctions() {
+        System.out.println("Testing aggregate functions...");
+        
+        // Test COUNT(*)
+        Query<Long> q1 = queryFactory
+                .select(queryFactory.count())
+                .from(user.getEntityPath());
+        
+        String sql1 = q1.toSQL();
+        System.out.println("✓ COUNT(*): " + sql1);
+        assert sql1.contains("SELECT COUNT(*)");
+        assert sql1.contains("FROM user");
+        
+        // Test COUNT(column)
+        Query<Long> q2 = queryFactory
+                .select(queryFactory.count(user.email))
+                .from(user.getEntityPath())
+                .where(user.age.goe(18));
+        
+        String sql2 = q2.toSQL();
+        System.out.println("✓ COUNT(column) with WHERE: " + sql2);
+        assert sql2.contains("SELECT COUNT(user.email)");
+        assert sql2.contains("WHERE (user.age >= 18)");
+        
+        // Test SUM
+        Query<Integer> q3 = queryFactory
+                .select(queryFactory.sum(user.age))
+                .from(user.getEntityPath())
+                .where(user.city.eq("New York"));
+        
+        String sql3 = q3.toSQL();
+        System.out.println("✓ SUM with WHERE: " + sql3);
+        assert sql3.contains("SELECT SUM(user.age)");
+        assert sql3.contains("WHERE (user.city = 'New York')");
+        
+        // Test AVG
+        Query<BigDecimal> q4 = queryFactory
+                .select(queryFactory.avg(product.price))
+                .from(product.getEntityPath())
+                .where(product.category.eq("Electronics"));
+        
+        String sql4 = q4.toSQL();
+        System.out.println("✓ AVG with WHERE: " + sql4);
+        assert sql4.contains("SELECT AVG(product.price)");
+        assert sql4.contains("WHERE (product.category = 'Electronics')");
+        
+        // Test MIN
+        Query<BigDecimal> q5 = queryFactory
+                .select(queryFactory.min(product.price))
+                .from(product.getEntityPath());
+        
+        String sql5 = q5.toSQL();
+        System.out.println("✓ MIN: " + sql5);
+        assert sql5.contains("SELECT MIN(product.price)");
+        
+        // Test MAX
+        Query<Integer> q6 = queryFactory
+                .select(queryFactory.max(user.age))
+                .from(user.getEntityPath())
+                .where(user.city.in("Tokyo", "Seoul"));
+        
+        String sql6 = q6.toSQL();
+        System.out.println("✓ MAX with IN: " + sql6);
+        assert sql6.contains("SELECT MAX(user.age)");
+        assert sql6.contains("WHERE (user.city IN ('Tokyo', 'Seoul'))");
+        
+        // Test multiple aggregates in one query
+        Query<Object[]> q7 = queryFactory
+                .select(
+                    queryFactory.count(),
+                    queryFactory.avg(user.age),
+                    queryFactory.min(user.age),
+                    queryFactory.max(user.age)
+                )
+                .from(user.getEntityPath())
+                .where(user.email.isNotNull());
+        
+        String sql7 = q7.toSQL();
+        System.out.println("✓ Multiple aggregates: " + sql7);
+        assert sql7.contains("SELECT COUNT(*), AVG(user.age), MIN(user.age), MAX(user.age)");
+        assert sql7.contains("WHERE (user.email IS NOT NULL)");
+        
+        System.out.println();
+    }
+    
+    private static void testCaseWhenExpressions() {
+        System.out.println("Testing CASE WHEN expressions...");
+        
+        // Test simple CASE WHEN with constants
+        CaseExpression<String> case1 = queryFactory.caseWhen(String.class)
+                .when(user.age.lt(18), "Minor")
+                .when(user.age.between(18, 65), "Adult")
+                .otherwise("Senior");
+        
+        Query<String> q1 = queryFactory
+                .select(case1)
+                .from(user.getEntityPath());
+        
+        String sql1 = q1.toSQL();
+        System.out.println("✓ Simple CASE WHEN: " + sql1);
+        assert sql1.contains("SELECT CASE WHEN (user.age < 18) THEN Minor");
+        assert sql1.contains("WHEN (user.age BETWEEN 18 AND 65) THEN Adult");
+        assert sql1.contains("ELSE Senior END");
+        
+        // Test CASE WHEN with ExpressionUtils
+        CaseExpression<String> case2 = ExpressionUtils.caseWhen(String.class)
+                .when(user.firstName.isNull(), "Unknown")
+                .when(user.firstName.isEmpty(), "Empty")
+                .otherwise("Known");
+        
+        Query<String> q2 = queryFactory
+                .select(case2)
+                .from(user.getEntityPath())
+                .where(user.age.goe(18));
+        
+        String sql2 = q2.toSQL();
+        System.out.println("✓ CASE WHEN with null/empty checks: " + sql2);
+        assert sql2.contains("SELECT CASE WHEN (user.firstName IS NULL) THEN Unknown");
+        assert sql2.contains("WHEN (user.firstName = '' OR user.firstName IS NULL) THEN Empty");
+        assert sql2.contains("ELSE Known END");
+        
+        // Test CASE WHEN for numeric values
+        CaseExpression<Integer> case3 = ExpressionUtils.caseWhenInt()
+                .when(product.stockQuantity.eq(0), -1)
+                .when(product.stockQuantity.between(1, 10), 1)
+                .when(product.stockQuantity.gt(10), 2)
+                .end(); // No ELSE clause
+        
+        Query<Integer> q3 = queryFactory
+                .select(case3)
+                .from(product.getEntityPath())
+                .where(product.price.gt(new BigDecimal("0")));
+        
+        String sql3 = q3.toSQL();
+        System.out.println("✓ CASE WHEN with numeric values (no ELSE): " + sql3);
+        assert sql3.contains("SELECT CASE WHEN (product.stockQuantity = 0) THEN -1");
+        assert sql3.contains("WHEN (product.stockQuantity BETWEEN 1 AND 10) THEN 1");
+        assert sql3.contains("WHEN (product.stockQuantity > 10) THEN 2 END");
+        assert !sql3.contains("ELSE");
+        
+        // Test CASE WHEN in SELECT with complex expression
+        CaseExpression<String> case4 = ExpressionUtils.caseWhen()
+                .when(user.city.eq("New York"), "NY")
+                .when(user.city.eq("Los Angeles"), "LA")
+                .otherwise("Other");
+        
+        Query<String> q4 = queryFactory
+                .select(case4)
+                .from(user.getEntityPath())
+                .where(user.age.goe(18));
+        
+        String sql4 = q4.toSQL();
+        System.out.println("✓ CASE WHEN in complex query: " + sql4);
+        assert sql4.contains("SELECT CASE WHEN (user.city = 'New York') THEN NY");
+        assert sql4.contains("WHEN (user.city = 'Los Angeles') THEN LA");
+        assert sql4.contains("ELSE Other END");
+        assert sql4.contains("WHERE (user.age >= 18)");
+        
+        // Test CASE WHEN with boolean expressions
+        CaseExpression<Boolean> case5 = ExpressionUtils.caseWhenBoolean()
+                .when(user.age.lt(18).or(user.age.gt(65)), true)
+                .otherwise(false);
+        
+        Query<Boolean> q5 = queryFactory
+                .select(case5)
+                .from(user.getEntityPath())
+                .where(user.email.isNotNull());
+        
+        String sql5 = q5.toSQL();
+        System.out.println("✓ CASE WHEN with boolean result: " + sql5);
+        assert sql5.contains("SELECT CASE WHEN ((user.age < 18) OR (user.age > 65)) THEN true");
+        assert sql5.contains("ELSE false END");
+        
+        // Test CASE WHEN with simple aggregate condition
+        CaseExpression<String> case6 = ExpressionUtils.caseWhen()
+                .when(user.age.gt(65), "Senior")
+                .when(user.age.between(18, 65), "Adult")
+                .otherwise("Minor");
+        
+        Query<String> q6 = queryFactory
+                .select(case6)
+                .from(user.getEntityPath())
+                .where(user.email.isNotNull());
+        
+        String sql6 = q6.toSQL();
+        System.out.println("✓ CASE WHEN with age ranges: " + sql6);
+        assert sql6.contains("SELECT CASE WHEN (user.age > 65) THEN Senior");
+        assert sql6.contains("WHEN (user.age BETWEEN 18 AND 65) THEN Adult");
+        assert sql6.contains("ELSE Minor END");
+        assert sql6.contains("WHERE (user.email IS NOT NULL)");
         
         System.out.println();
     }

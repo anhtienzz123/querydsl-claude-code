@@ -12,10 +12,10 @@ import java.util.Arrays;
 import java.util.stream.Collectors;
 
 /**
- * Visitor implementation that converts expressions to SQL string representations.
- * This class handles the conversion of QueryDSL expressions into their SQL equivalents.
+ * Visitor implementation that converts expressions to parameterized SQL with placeholders.
+ * This class generates SQL suitable for PreparedStatement execution with ? placeholders.
  */
-public class SQLVisitor implements ExpressionVisitor<String> {
+public class ParameterizedSQLVisitor implements ExpressionVisitor<String> {
     
     /**
      * {@inheritDoc}
@@ -44,9 +44,8 @@ public class SQLVisitor implements ExpressionVisitor<String> {
     /**
      * {@inheritDoc}
      * 
-     * Converts boolean expressions to their SQL string representations based on the predicate type.
-     * Handles all supported predicate operations including comparisons, null checks, string operations,
-     * logical operations, and complex predicates like BETWEEN and IN.
+     * Converts boolean expressions to their parameterized SQL string representations.
+     * Uses ? placeholders for parameter values instead of literal values.
      */
     @Override
     public String visit(BooleanExpression expression) {
@@ -74,11 +73,7 @@ public class SQLVisitor implements ExpressionVisitor<String> {
     }
     
     /**
-     * Formats binary operations (two operands) with the specified operator.
-     *
-     * @param expression the boolean expression containing the operands
-     * @param operator the SQL operator to use between operands
-     * @return formatted SQL string with the binary operation
+     * Formats binary operations with parameterized placeholders.
      */
     private String formatBinary(BooleanExpression expression, String operator) {
         Object[] operands = expression.getOperands();
@@ -86,22 +81,18 @@ public class SQLVisitor implements ExpressionVisitor<String> {
         String right;
         
         // For logical operators (AND, OR), both operands should be visited as expressions
-        // For comparison operators, the right operand should be formatted as a value
+        // For comparison operators, the right operand should be parameterized
         if ("AND".equals(operator) || "OR".equals(operator)) {
             right = visitOperand(operands[1]);
         } else {
-            right = formatValue(operands[1]);
+            right = isExpression(operands[1]) ? visitOperand(operands[1]) : "?";
         }
         
         return String.format("(%s %s %s)", left, operator, right);
     }
     
     /**
-     * Formats unary operations (single operand) with the specified operator.
-     *
-     * @param expression the boolean expression containing the operand
-     * @param operator the SQL operator to apply to the operand
-     * @return formatted SQL string with the unary operation
+     * Formats unary operations.
      */
     private String formatUnary(BooleanExpression expression, String operator) {
         Object[] operands = expression.getOperands();
@@ -110,79 +101,63 @@ public class SQLVisitor implements ExpressionVisitor<String> {
     }
     
     /**
-     * Formats BETWEEN operations for range comparisons.
-     *
-     * @param expression the boolean expression with field, min, and max values
-     * @return formatted SQL BETWEEN clause
+     * Formats BETWEEN operations with parameterized placeholders.
      */
     private String formatBetween(BooleanExpression expression) {
         Object[] operands = expression.getOperands();
         String field = visitOperand(operands[0]);
-        String min = formatValue(operands[1]);
-        String max = formatValue(operands[2]);
+        String min = isExpression(operands[1]) ? visitOperand(operands[1]) : "?";
+        String max = isExpression(operands[2]) ? visitOperand(operands[2]) : "?";
         return String.format("(%s BETWEEN %s AND %s)", field, min, max);
     }
     
     /**
-     * Formats IN operations for testing membership in a set of values.
-     *
-     * @param expression the boolean expression with field and array of values
-     * @return formatted SQL IN clause with comma-separated values
+     * Formats IN operations with parameterized placeholders.
      */
     private String formatIn(BooleanExpression expression) {
         Object[] operands = expression.getOperands();
         String field = visitOperand(operands[0]);
-        Object[] values = (Object[]) operands[1];
-        String valuesList = Arrays.stream(values)
-                .map(this::formatValue)
-                .collect(Collectors.joining(", "));
-        return String.format("(%s IN (%s))", field, valuesList);
+        
+        if (operands[1] instanceof Object[]) {
+            Object[] values = (Object[]) operands[1];
+            String placeholders = Arrays.stream(values)
+                    .map(v -> "?")
+                    .collect(Collectors.joining(", "));
+            return String.format("(%s IN (%s))", field, placeholders);
+        }
+        
+        return String.format("(%s IN (?))", field);
     }
     
     /**
-     * Formats CONTAINS operations as LIKE with surrounding wildcards.
-     *
-     * @param expression the boolean expression with field and substring
-     * @return formatted SQL LIKE clause with % wildcards around the value
+     * Formats CONTAINS operations with parameterized placeholder.
      */
     private String formatContains(BooleanExpression expression) {
         Object[] operands = expression.getOperands();
         String field = visitOperand(operands[0]);
-        String value = formatValue("%" + operands[1] + "%");
-        return String.format("(%s LIKE %s)", field, value);
+        return String.format("(%s LIKE ?)", field);
     }
     
     /**
-     * Formats STARTS_WITH operations as LIKE with trailing wildcard.
-     *
-     * @param expression the boolean expression with field and prefix
-     * @return formatted SQL LIKE clause with % wildcard after the value
+     * Formats STARTS_WITH operations with parameterized placeholder.
      */
     private String formatStartsWith(BooleanExpression expression) {
         Object[] operands = expression.getOperands();
         String field = visitOperand(operands[0]);
-        String value = formatValue(operands[1] + "%");
-        return String.format("(%s LIKE %s)", field, value);
+        return String.format("(%s LIKE ?)", field);
     }
     
     /**
-     * Formats ENDS_WITH operations as LIKE with leading wildcard.
-     *
-     * @param expression the boolean expression with field and suffix
-     * @return formatted SQL LIKE clause with % wildcard before the value
+     * Formats ENDS_WITH operations with parameterized placeholder.
      */
     private String formatEndsWith(BooleanExpression expression) {
         Object[] operands = expression.getOperands();
         String field = visitOperand(operands[0]);
-        String value = formatValue("%" + operands[1]);
-        return String.format("(%s LIKE %s)", field, value);
+        return String.format("(%s LIKE ?)", field);
     }
     
     /**
-     * Formats IS_EMPTY operations to check for empty string or null values.
-     *
-     * @param expression the boolean expression with the field to check
-     * @return formatted SQL condition checking for empty string or null
+     * Formats IS_EMPTY operations.
      */
     private String formatIsEmpty(BooleanExpression expression) {
         Object[] operands = expression.getOperands();
@@ -191,10 +166,7 @@ public class SQLVisitor implements ExpressionVisitor<String> {
     }
     
     /**
-     * Formats IS_NOT_EMPTY operations to check for non-empty, non-null values.
-     *
-     * @param expression the boolean expression with the field to check
-     * @return formatted SQL condition checking for non-empty and non-null values
+     * Formats IS_NOT_EMPTY operations.
      */
     private String formatIsNotEmpty(BooleanExpression expression) {
         Object[] operands = expression.getOperands();
@@ -203,10 +175,7 @@ public class SQLVisitor implements ExpressionVisitor<String> {
     }
     
     /**
-     * Formats NOT operations to negate boolean expressions.
-     *
-     * @param expression the boolean expression with the operand to negate
-     * @return formatted SQL NOT clause
+     * Formats NOT operations.
      */
     private String formatNot(BooleanExpression expression) {
         Object[] operands = expression.getOperands();
@@ -216,11 +185,6 @@ public class SQLVisitor implements ExpressionVisitor<String> {
     
     /**
      * Visits an operand, converting it to SQL string representation.
-     * If the operand is an Expression, delegates to its accept method.
-     * Otherwise, converts to string.
-     *
-     * @param operand the operand to visit
-     * @return SQL string representation of the operand
      */
     private String visitOperand(Object operand) {
         if (operand instanceof Expression) {
@@ -230,22 +194,18 @@ public class SQLVisitor implements ExpressionVisitor<String> {
     }
     
     /**
-     * Formats a value for use in SQL, adding quotes around strings.
-     *
-     * @param value the value to format
-     * @return formatted SQL value (strings are quoted, others converted to string)
+     * Checks if an operand is an expression.
      */
-    private String formatValue(Object value) {
-        if (value instanceof String) {
-            return "'" + value + "'";
-        }
-        return String.valueOf(value);
+    private boolean isExpression(Object operand) {
+        return operand instanceof Expression;
     }
 
     /**
      * {@inheritDoc}
      * 
-     * Converts aggregate expressions (COUNT, SUM, AVG, MIN, MAX) to their SQL representations.
+     * Converts aggregate expressions to their parameterized SQL representations.
+     * Aggregate functions typically don't have parameters themselves, but their
+     * inner expressions might.
      */
     @Override
     public String visit(AggregateExpression<?> expression) {
@@ -263,7 +223,8 @@ public class SQLVisitor implements ExpressionVisitor<String> {
     /**
      * {@inheritDoc}
      * 
-     * Converts CASE expressions to their SQL representations.
+     * Converts CASE expressions to their parameterized SQL representations.
+     * Parameters in CASE expressions come from the WHEN conditions and values.
      */
     @Override
     public String visit(CaseExpression<?> expression) {

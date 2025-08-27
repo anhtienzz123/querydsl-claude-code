@@ -1,6 +1,8 @@
 package hatien.querydsl.core.query;
 
 import hatien.querydsl.core.expression.Expression;
+import hatien.querydsl.core.expression.*;
+import static hatien.querydsl.core.expression.ExpressionUtils.*;
 
 /**
  * Factory class for creating Query instances with a fluent API.
@@ -124,5 +126,90 @@ public class QueryFactory {
      */
     public <T> DeleteQuery<T> deleteFrom(Expression<T> entity) {
         return new DeleteQueryBuilder<T>().from(entity);
+    }
+
+    // =============================================================================
+    // AGGREGATE FUNCTION CONVENIENCE METHODS
+    // =============================================================================
+
+    /**
+     * Creates a COUNT(*) expression that counts all rows.
+     * This is a convenience method delegating to ExpressionUtils.count().
+     *
+     * @return a CountExpression that counts all rows
+     */
+    public CountExpression count() {
+        return ExpressionUtils.count();
+    }
+
+    /**
+     * Creates a COUNT(expression) that counts non-null values of the given expression.
+     * This is a convenience method delegating to ExpressionUtils.count(expression).
+     *
+     * @param expression the expression to count non-null values of
+     * @return a CountExpression that counts the given expression
+     */
+    public CountExpression count(Expression<?> expression) {
+        return ExpressionUtils.count(expression);
+    }
+
+    /**
+     * Creates a SUM(expression) that calculates the sum of the given numeric expression.
+     * This is a convenience method delegating to ExpressionUtils.sum(expression).
+     *
+     * @param <T> the numeric type
+     * @param expression the numeric expression to sum
+     * @return a SumExpression for the given expression
+     */
+    public <T extends Number> SumExpression<T> sum(Expression<T> expression) {
+        return ExpressionUtils.sum(expression);
+    }
+
+    /**
+     * Creates an AVG(expression) that calculates the average of the given numeric expression.
+     * This is a convenience method delegating to ExpressionUtils.avg(expression).
+     *
+     * @param <T> the numeric type
+     * @param expression the numeric expression to average
+     * @return an AvgExpression for the given expression
+     */
+    public <T extends Number> AvgExpression<T> avg(Expression<T> expression) {
+        return ExpressionUtils.avg(expression);
+    }
+
+    /**
+     * Creates a MIN(expression) that finds the minimum value of the given comparable expression.
+     * This is a convenience method delegating to ExpressionUtils.min(expression).
+     *
+     * @param <T> the comparable type
+     * @param expression the comparable expression to find the minimum of
+     * @return a MinExpression for the given expression
+     */
+    public <T extends Comparable<T>> MinExpression<T> min(Expression<T> expression) {
+        return ExpressionUtils.min(expression);
+    }
+
+    /**
+     * Creates a MAX(expression) that finds the maximum value of the given comparable expression.
+     * This is a convenience method delegating to ExpressionUtils.max(expression).
+     *
+     * @param <T> the comparable type
+     * @param expression the comparable expression to find the maximum of
+     * @return a MaxExpression for the given expression
+     */
+    public <T extends Comparable<T>> MaxExpression<T> max(Expression<T> expression) {
+        return ExpressionUtils.max(expression);
+    }
+
+    /**
+     * Creates a new CaseBuilder for building CASE expressions with the specified return type.
+     * This is a convenience method delegating to ExpressionUtils.caseWhen(type).
+     *
+     * @param <T> the return type
+     * @param type the class representing the return type
+     * @return a new CaseBuilder instance
+     */
+    public <T> CaseExpression.CaseBuilder<T> caseWhen(Class<T> type) {
+        return ExpressionUtils.caseWhen(type);
     }
 }

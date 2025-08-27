@@ -4,6 +4,8 @@ import hatien.querydsl.core.path.EntityPath;
 import hatien.querydsl.core.path.StringPath;
 import hatien.querydsl.core.path.NumberPath;
 import hatien.querydsl.core.predicate.BooleanExpression;
+import hatien.querydsl.core.expression.AggregateExpression;
+import hatien.querydsl.core.expression.CaseExpression;
 
 /**
  * Visitor interface for processing different types of expressions.
@@ -40,4 +42,20 @@ public interface ExpressionVisitor<R> {
      * @return the result of processing this boolean expression
      */
     R visit(BooleanExpression expression);
+
+    /**
+     * Visits an AggregateExpression (COUNT, SUM, AVG, MIN, MAX).
+     *
+     * @param expression the aggregate expression to visit
+     * @return the result of processing this aggregate expression
+     */
+    R visit(AggregateExpression<?> expression);
+
+    /**
+     * Visits a CaseExpression (CASE WHEN construct).
+     *
+     * @param expression the case expression to visit
+     * @return the result of processing this case expression
+     */
+    R visit(CaseExpression<?> expression);
 }
