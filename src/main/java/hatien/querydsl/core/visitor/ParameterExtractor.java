@@ -11,6 +11,8 @@ import hatien.querydsl.core.path.EntityPath;
 import hatien.querydsl.core.path.NumberPath;
 import hatien.querydsl.core.path.StringPath;
 import hatien.querydsl.core.predicate.BooleanExpression;
+import hatien.querydsl.core.query.JoinExpression;
+import hatien.querydsl.core.query.TableSource;
 
 /**
  * Visitor implementation that extracts parameter values from expressions for
@@ -223,6 +225,47 @@ public class ParameterExtractor implements ExpressionVisitor<List<Object>> {
 			if (expression.getElseExpression() instanceof BooleanExpression) {
 				parameters.addAll(visit((BooleanExpression) expression.getElseExpression()));
 			}
+		}
+
+		return parameters;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 * 
+	 * Extracts parameters from JOIN expressions. Parameters come from the join
+	 * condition (ON clause).
+	 */
+	@Override
+	public List<Object> visit(JoinExpression<?> expression) {
+		List<Object> parameters = new ArrayList<>();
+
+		// Extract parameters from the join condition if present
+		if (expression.getCondition() != null && expression.getCondition() instanceof BooleanExpression) {
+			parameters.addAll(visit((BooleanExpression) expression.getCondition()));
+		}
+
+		// Extract parameters from the target expression if it has any
+		if (expression.getTarget() instanceof BooleanExpression) {
+			parameters.addAll(visit((BooleanExpression) expression.getTarget()));
+		}
+
+		return parameters;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 * 
+	 * Extracts parameters from table sources. Table sources typically don't have
+	 * parameters themselves, but we check the underlying source expression.
+	 */
+	@Override
+	public List<Object> visit(TableSource<?> tableSource) {
+		List<Object> parameters = new ArrayList<>();
+
+		// Extract parameters from the underlying source if it's a boolean expression
+		if (tableSource.getSource() instanceof BooleanExpression) {
+			parameters.addAll(visit((BooleanExpression) tableSource.getSource()));
 		}
 
 		return parameters;

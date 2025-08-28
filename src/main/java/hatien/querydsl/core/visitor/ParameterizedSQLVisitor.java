@@ -8,6 +8,8 @@ import hatien.querydsl.core.path.EntityPath;
 import hatien.querydsl.core.path.StringPath;
 import hatien.querydsl.core.path.NumberPath;
 import hatien.querydsl.core.predicate.BooleanExpression;
+import hatien.querydsl.core.query.JoinExpression;
+import hatien.querydsl.core.query.TableSource;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
@@ -241,6 +243,46 @@ public class ParameterizedSQLVisitor implements ExpressionVisitor<String> {
 		}
 
 		sql.append(" END");
+		return sql.toString();
+	}
+
+	/**
+	 * {@inheritDoc}
+	 * 
+	 * Converts JOIN expressions to their parameterized SQL representations.
+	 */
+	@Override
+	public String visit(JoinExpression<?> expression) {
+		StringBuilder sql = new StringBuilder();
+		sql.append(expression.getJoinType().getSqlKeyword()).append(" ");
+		sql.append(visitOperand(expression.getTarget()));
+
+		if (expression.hasAlias()) {
+			sql.append(" AS ").append(expression.getAlias());
+		}
+
+		// Add ON condition for all joins except CROSS JOIN
+		if (expression.getCondition() != null) {
+			sql.append(" ON ").append(visitOperand(expression.getCondition()));
+		}
+
+		return sql.toString();
+	}
+
+	/**
+	 * {@inheritDoc}
+	 * 
+	 * Converts TableSource expressions to their parameterized SQL representations.
+	 */
+	@Override
+	public String visit(TableSource<?> tableSource) {
+		StringBuilder sql = new StringBuilder();
+		sql.append(visitOperand(tableSource.getSource()));
+
+		if (tableSource.hasAlias()) {
+			sql.append(" AS ").append(tableSource.getAlias());
+		}
+
 		return sql.toString();
 	}
 }

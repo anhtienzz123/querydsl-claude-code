@@ -36,6 +36,7 @@ public class QueryDSLTest {
 		testDeleteQueries();
 		testAggregateFunctions();
 		testCaseWhenExpressions();
+		testJoinQueries();
 
 		System.out.println("\n=== All tests completed successfully! ===");
 	}
@@ -491,6 +492,119 @@ public class QueryDSLTest {
 		assert sql6.contains("WHEN (user.age BETWEEN 18 AND 65) THEN Adult");
 		assert sql6.contains("ELSE Minor END");
 		assert sql6.contains("WHERE (user.email IS NOT NULL)");
+
+		System.out.println();
+	}
+
+	private static void testJoinQueries() {
+		System.out.println("Testing JOIN queries...");
+
+		// Test INNER JOIN
+		Query<hatien.querydsl.examples.User> q1 = queryFactory.selectFrom(user.getEntityPath())
+				.innerJoin(product.getEntityPath(), user.id.eq(1L));
+
+		String sql1 = q1.toSQL();
+		System.out.println("✓ INNER JOIN: " + sql1);
+		assert sql1.contains("SELECT * FROM user");
+		assert sql1.contains("INNER JOIN product ON (user.id = 1)");
+
+		// Test LEFT JOIN with alias
+		Query<hatien.querydsl.examples.User> q2 = queryFactory.selectFrom(user.getEntityPath())
+				.leftJoin(product.getEntityPath(), "p", product.stockQuantity.gt(0)).where(user.age.goe(18));
+
+		String sql2 = q2.toSQL();
+		System.out.println("✓ LEFT JOIN with alias: " + sql2);
+		assert sql2.contains("SELECT * FROM user");
+		assert sql2.contains("LEFT JOIN product AS p ON (product.stockQuantity > 0)");
+		assert sql2.contains("WHERE (user.age >= 18)");
+
+		// Test RIGHT JOIN
+		Query<hatien.querydsl.examples.User> q3 = queryFactory.selectFrom(user.getEntityPath())
+				.rightJoin(product.getEntityPath(), product.price.gt(new java.math.BigDecimal("100")))
+				.where(user.firstName.eq("John"));
+
+		String sql3 = q3.toSQL();
+		System.out.println("✓ RIGHT JOIN with WHERE: " + sql3);
+		assert sql3.contains("SELECT * FROM user");
+		assert sql3.contains("RIGHT JOIN product ON (product.price > 100)");
+		assert sql3.contains("WHERE (user.firstName = 'John')");
+
+		// Test FULL OUTER JOIN
+		Query<hatien.querydsl.examples.User> q4 = queryFactory.selectFrom(user.getEntityPath())
+				.fullOuterJoin(product.getEntityPath(), product.name.isNotNull());
+
+		String sql4 = q4.toSQL();
+		System.out.println("✓ FULL OUTER JOIN: " + sql4);
+		assert sql4.contains("SELECT * FROM user");
+		assert sql4.contains("FULL OUTER JOIN product ON (product.name IS NOT NULL)");
+
+		// Test CROSS JOIN
+		Query<hatien.querydsl.examples.User> q5 = queryFactory.selectFrom(user.getEntityPath())
+				.crossJoin(product.getEntityPath());
+
+		String sql5 = q5.toSQL();
+		System.out.println("✓ CROSS JOIN: " + sql5);
+		assert sql5.contains("SELECT * FROM user");
+		assert sql5.contains("CROSS JOIN product");
+		assert !sql5.contains("ON"); // CROSS JOIN has no ON condition
+
+		// Test multiple JOINs
+		Query<hatien.querydsl.examples.User> q6 = queryFactory.selectFrom(user.getEntityPath())
+				.innerJoin(product.getEntityPath(), user.age.gt(20))
+				.leftJoin(product.getEntityPath(), "p2", product.stockQuantity.loe(100))
+				.where(user.city.eq("New York"));
+
+		String sql6 = q6.toSQL();
+		System.out.println("✓ Multiple JOINs: " + sql6);
+		assert sql6.contains("SELECT * FROM user");
+		assert sql6.contains("INNER JOIN product ON (user.age > 20)");
+		assert sql6.contains("LEFT JOIN product AS p2 ON (product.stockQuantity <= 100)");
+		assert sql6.contains("WHERE (user.city = 'New York')");
+
+		// Test JOIN with column selection
+		Query<Object[]> q7 = queryFactory.select(user.firstName, user.lastName, product.name, product.price)
+				.from(user.getEntityPath()).innerJoin(product.getEntityPath(), user.city.eq("Boston"))
+				.where(product.price.between(new java.math.BigDecimal("10"), new java.math.BigDecimal("100")));
+
+		String sql7 = q7.toSQL();
+		System.out.println("✓ JOIN with column selection: " + sql7);
+		assert sql7.contains("SELECT user.firstName, user.lastName, product.name, product.price");
+		assert sql7.contains("FROM user");
+		assert sql7.contains("INNER JOIN product ON (user.city = 'Boston')");
+		assert sql7.contains("WHERE (product.price BETWEEN 10 AND 100)");
+
+		// Test FROM with alias and JOIN
+		Query<hatien.querydsl.examples.User> q8 = queryFactory.selectFrom(user.getEntityPath())
+				.from(user.getEntityPath(), "u")
+				.innerJoin(product.getEntityPath(), "p", product.category.eq("Electronics"));
+
+		String sql8 = q8.toSQL();
+		System.out.println("✓ FROM with alias and JOIN: " + sql8);
+		assert sql8.contains("FROM user AS u");
+		assert sql8.contains("INNER JOIN product AS p ON (product.category = 'Electronics')");
+
+		// Test JOIN with complex conditions
+		Query<hatien.querydsl.examples.User> q9 = queryFactory.selectFrom(user.getEntityPath())
+				.innerJoin(product.getEntityPath(),
+						user.age.goe(25).and(product.price.gt(new java.math.BigDecimal("50"))))
+				.where(user.city.isNotNull());
+
+		String sql9 = q9.toSQL();
+		System.out.println("✓ JOIN with complex conditions: " + sql9);
+		assert sql9.contains("INNER JOIN product ON ((user.age >= 25) AND (product.price > 50))");
+		assert sql9.contains("WHERE (user.city IS NOT NULL)");
+
+		// Test JOIN with aggregates
+		Query<Object[]> q10 = queryFactory.select(user.firstName, queryFactory.count(), queryFactory.sum(product.price))
+				.from(user.getEntityPath()).leftJoin(product.getEntityPath(), product.stockQuantity.gt(0))
+				.where(user.email.isNotNull()).groupBy(user.firstName);
+
+		String sql10 = q10.toSQL();
+		System.out.println("✓ JOIN with aggregates and GROUP BY: " + sql10);
+		assert sql10.contains("SELECT user.firstName, COUNT(*), SUM(product.price)");
+		assert sql10.contains("LEFT JOIN product ON (product.stockQuantity > 0)");
+		assert sql10.contains("WHERE (user.email IS NOT NULL)");
+		assert sql10.contains("GROUP BY user.firstName");
 
 		System.out.println();
 	}

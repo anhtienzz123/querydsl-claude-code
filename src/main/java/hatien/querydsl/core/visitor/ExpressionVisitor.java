@@ -6,6 +6,8 @@ import hatien.querydsl.core.path.NumberPath;
 import hatien.querydsl.core.predicate.BooleanExpression;
 import hatien.querydsl.core.expression.AggregateExpression;
 import hatien.querydsl.core.expression.CaseExpression;
+import hatien.querydsl.core.query.JoinExpression;
+import hatien.querydsl.core.query.TableSource;
 
 /**
  * Visitor interface for processing different types of expressions. Implements
@@ -61,4 +63,20 @@ public interface ExpressionVisitor<R> {
 	 * @return the result of processing this case expression
 	 */
 	R visit(CaseExpression<?> expression);
+
+	/**
+	 * Visits a JoinExpression (JOIN operation).
+	 *
+	 * @param expression the join expression to visit
+	 * @return the result of processing this join expression
+	 */
+	R visit(JoinExpression<?> expression);
+
+	/**
+	 * Visits a TableSource (table with optional alias).
+	 *
+	 * @param tableSource the table source to visit
+	 * @return the result of processing this table source
+	 */
+	R visit(TableSource<?> tableSource);
 }

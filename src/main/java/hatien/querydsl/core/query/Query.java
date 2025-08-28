@@ -28,6 +28,108 @@ public interface Query<T> {
 	Query<T> from(Expression<?>... sources);
 
 	/**
+	 * Adds FROM clause source with alias to this query.
+	 *
+	 * @param source the source expression (typically an entity path)
+	 * @param alias  the alias to use for the table
+	 * @return this query for method chaining
+	 */
+	Query<T> from(Expression<?> source, String alias);
+
+	/**
+	 * Adds an INNER JOIN to this query.
+	 *
+	 * @param target    the target table to join
+	 * @param condition the join condition (ON clause)
+	 * @return this query for method chaining
+	 */
+	Query<T> innerJoin(Expression<?> target, Predicate condition);
+
+	/**
+	 * Adds an INNER JOIN with alias to this query.
+	 *
+	 * @param target    the target table to join
+	 * @param alias     the alias for the joined table
+	 * @param condition the join condition (ON clause)
+	 * @return this query for method chaining
+	 */
+	Query<T> innerJoin(Expression<?> target, String alias, Predicate condition);
+
+	/**
+	 * Adds a LEFT JOIN to this query.
+	 *
+	 * @param target    the target table to join
+	 * @param condition the join condition (ON clause)
+	 * @return this query for method chaining
+	 */
+	Query<T> leftJoin(Expression<?> target, Predicate condition);
+
+	/**
+	 * Adds a LEFT JOIN with alias to this query.
+	 *
+	 * @param target    the target table to join
+	 * @param alias     the alias for the joined table
+	 * @param condition the join condition (ON clause)
+	 * @return this query for method chaining
+	 */
+	Query<T> leftJoin(Expression<?> target, String alias, Predicate condition);
+
+	/**
+	 * Adds a RIGHT JOIN to this query.
+	 *
+	 * @param target    the target table to join
+	 * @param condition the join condition (ON clause)
+	 * @return this query for method chaining
+	 */
+	Query<T> rightJoin(Expression<?> target, Predicate condition);
+
+	/**
+	 * Adds a RIGHT JOIN with alias to this query.
+	 *
+	 * @param target    the target table to join
+	 * @param alias     the alias for the joined table
+	 * @param condition the join condition (ON clause)
+	 * @return this query for method chaining
+	 */
+	Query<T> rightJoin(Expression<?> target, String alias, Predicate condition);
+
+	/**
+	 * Adds a FULL OUTER JOIN to this query.
+	 *
+	 * @param target    the target table to join
+	 * @param condition the join condition (ON clause)
+	 * @return this query for method chaining
+	 */
+	Query<T> fullOuterJoin(Expression<?> target, Predicate condition);
+
+	/**
+	 * Adds a FULL OUTER JOIN with alias to this query.
+	 *
+	 * @param target    the target table to join
+	 * @param alias     the alias for the joined table
+	 * @param condition the join condition (ON clause)
+	 * @return this query for method chaining
+	 */
+	Query<T> fullOuterJoin(Expression<?> target, String alias, Predicate condition);
+
+	/**
+	 * Adds a CROSS JOIN to this query.
+	 *
+	 * @param target the target table to join
+	 * @return this query for method chaining
+	 */
+	Query<T> crossJoin(Expression<?> target);
+
+	/**
+	 * Adds a CROSS JOIN with alias to this query.
+	 *
+	 * @param target the target table to join
+	 * @param alias  the alias for the joined table
+	 * @return this query for method chaining
+	 */
+	Query<T> crossJoin(Expression<?> target, String alias);
+
+	/**
 	 * Adds WHERE clause predicates to this query.
 	 *
 	 * @param predicates the predicates to add as conditions

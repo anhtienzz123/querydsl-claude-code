@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
  */
 public class ExecutableQueryBuilder<T> implements Query<T> {
 	private final List<Expression<?>> selectList = new ArrayList<>();
-	private final List<Expression<?>> fromList = new ArrayList<>();
+	private final QuerySource querySource = new QuerySource();
 	private final List<Predicate> whereList = new ArrayList<>();
 	private final List<Expression<?>> orderByList = new ArrayList<>();
 	private final List<Expression<?>> groupByList = new ArrayList<>();
@@ -61,7 +61,109 @@ public class ExecutableQueryBuilder<T> implements Query<T> {
 	 */
 	@Override
 	public Query<T> from(Expression<?>... sources) {
-		fromList.addAll(Arrays.asList(sources));
+		// For backward compatibility, use the first source as main source
+		if (sources.length > 0) {
+			querySource.from(sources[0]);
+		}
+		return this;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public Query<T> from(Expression<?> source, String alias) {
+		querySource.from(source, alias);
+		return this;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public Query<T> innerJoin(Expression<?> target, Predicate condition) {
+		querySource.innerJoin(target, condition);
+		return this;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public Query<T> innerJoin(Expression<?> target, String alias, Predicate condition) {
+		querySource.innerJoin(target, alias, condition);
+		return this;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public Query<T> leftJoin(Expression<?> target, Predicate condition) {
+		querySource.leftJoin(target, condition);
+		return this;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public Query<T> leftJoin(Expression<?> target, String alias, Predicate condition) {
+		querySource.leftJoin(target, alias, condition);
+		return this;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public Query<T> rightJoin(Expression<?> target, Predicate condition) {
+		querySource.rightJoin(target, condition);
+		return this;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public Query<T> rightJoin(Expression<?> target, String alias, Predicate condition) {
+		querySource.rightJoin(target, alias, condition);
+		return this;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public Query<T> fullOuterJoin(Expression<?> target, Predicate condition) {
+		querySource.fullOuterJoin(target, condition);
+		return this;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public Query<T> fullOuterJoin(Expression<?> target, String alias, Predicate condition) {
+		querySource.fullOuterJoin(target, alias, condition);
+		return this;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public Query<T> crossJoin(Expression<?> target) {
+		querySource.crossJoin(target);
+		return this;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	@Override
+	public Query<T> crossJoin(Expression<?> target, String alias) {
+		querySource.crossJoin(target, alias);
 		return this;
 	}
 
@@ -201,10 +303,15 @@ public class ExecutableQueryBuilder<T> implements Query<T> {
 			sql.append("SELECT *");
 		}
 
-		// FROM clause
-		if (!fromList.isEmpty()) {
+		// FROM clause with JOINs
+		if (querySource.hasMainSource()) {
 			sql.append(" FROM ");
-			sql.append(fromList.stream().map(expr -> expr.accept(sqlVisitor)).collect(Collectors.joining(", ")));
+			sql.append(querySource.getMainSource().accept(sqlVisitor));
+
+			// Add all JOINs
+			for (JoinExpression<?> join : querySource.getJoins()) {
+				sql.append(" ").append(join.accept(sqlVisitor));
+			}
 		}
 
 		// WHERE clause
@@ -263,11 +370,15 @@ public class ExecutableQueryBuilder<T> implements Query<T> {
 			sql.append("SELECT *");
 		}
 
-		// FROM clause
-		if (!fromList.isEmpty()) {
+		// FROM clause with JOINs
+		if (querySource.hasMainSource()) {
 			sql.append(" FROM ");
-			sql.append(fromList.stream().map(expr -> expr.accept(parameterizedSqlVisitor))
-					.collect(Collectors.joining(", ")));
+			sql.append(querySource.getMainSource().accept(parameterizedSqlVisitor));
+
+			// Add all JOINs
+			for (JoinExpression<?> join : querySource.getJoins()) {
+				sql.append(" ").append(join.accept(parameterizedSqlVisitor));
+			}
 		}
 
 		// WHERE clause
@@ -320,10 +431,15 @@ public class ExecutableQueryBuilder<T> implements Query<T> {
 		StringBuilder sql = new StringBuilder();
 		sql.append("SELECT COUNT(*)");
 
-		// FROM clause
-		if (!fromList.isEmpty()) {
+		// FROM clause with JOINs
+		if (querySource.hasMainSource()) {
 			sql.append(" FROM ");
-			sql.append(fromList.stream().map(expr -> expr.accept(sqlVisitor)).collect(Collectors.joining(", ")));
+			sql.append(querySource.getMainSource().accept(sqlVisitor));
+
+			// Add all JOINs
+			for (JoinExpression<?> join : querySource.getJoins()) {
+				sql.append(" ").append(join.accept(sqlVisitor));
+			}
 		}
 
 		// WHERE clause
@@ -358,11 +474,15 @@ public class ExecutableQueryBuilder<T> implements Query<T> {
 		StringBuilder sql = new StringBuilder();
 		sql.append("SELECT COUNT(*)");
 
-		// FROM clause
-		if (!fromList.isEmpty()) {
+		// FROM clause with JOINs
+		if (querySource.hasMainSource()) {
 			sql.append(" FROM ");
-			sql.append(fromList.stream().map(expr -> expr.accept(parameterizedSqlVisitor))
-					.collect(Collectors.joining(", ")));
+			sql.append(querySource.getMainSource().accept(parameterizedSqlVisitor));
+
+			// Add all JOINs
+			for (JoinExpression<?> join : querySource.getJoins()) {
+				sql.append(" ").append(join.accept(parameterizedSqlVisitor));
+			}
 		}
 
 		// WHERE clause
